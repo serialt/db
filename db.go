@@ -9,6 +9,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 	"moul.io/zapgorm2"
 )
 
@@ -48,7 +49,13 @@ func GetMysqlGormDB(mydb *Database) (db *gorm.DB) {
 			DontSupportRenameIndex:    true,  // 重命名索引时采用删除并新建的方式，MySQL 5.7 之前的数据库和 MariaDB 不支持重命名索引
 			DontSupportRenameColumn:   true,  // 用 `change` 重命名列，MySQL 8 之前的数据库和 MariaDB 不支持重命名列
 			SkipInitializeWithVersion: false, // 根据当前 MySQL 版本自动配置
-		}), &gorm.Config{Logger: GormLogger})
+		}), &gorm.Config{
+			Logger:                                   GormLogger,
+			DisableForeignKeyConstraintWhenMigrating: true,
+			NamingStrategy: schema.NamingStrategy{
+				SingularTable: true, // 设置创建表名时不使用复数
+			},
+		})
 		if err != nil {
 			logSugar.Infof("grom open failed: %v\n", err)
 			time.Sleep(3 * time.Second)
@@ -74,7 +81,13 @@ func GetPostgreSQLGormDB(mydb *Database) *gorm.DB {
 		myGormDB, err = gorm.Open(postgres.New(postgres.Config{
 			DSN:                  dsn,
 			PreferSimpleProtocol: true, // disables implicit prepared statement usage,
-		}), &gorm.Config{Logger: GormLogger})
+		}), &gorm.Config{
+			Logger:                                   GormLogger,
+			DisableForeignKeyConstraintWhenMigrating: true,
+			NamingStrategy: schema.NamingStrategy{
+				SingularTable: true, // 设置创建表名时不使用复数
+			},
+		})
 		if err != nil {
 			logSugar.Infof("gorm open failed: %v\n", err)
 			time.Sleep(3 * time.Second)
@@ -91,7 +104,13 @@ func GetSqliteGormDB(mydb *Database) *gorm.DB {
 	// "host=localhost user=gorm password=gorm dbname=gorm port=9920 sslmode=disable TimeZone=Asia/Shanghai"
 
 	for {
-		myGormDB, err = gorm.Open(sqlite.Open(mydb.DBName), &gorm.Config{Logger: GormLogger})
+		myGormDB, err = gorm.Open(sqlite.Open(mydb.DBName), &gorm.Config{
+			Logger:                                   GormLogger,
+			DisableForeignKeyConstraintWhenMigrating: true,
+			NamingStrategy: schema.NamingStrategy{
+				SingularTable: true, // 设置创建表名时不使用复数
+			},
+		})
 		if err != nil {
 			logSugar.Infof("gorm open failed: %v\n", err)
 			time.Sleep(3 * time.Second)
