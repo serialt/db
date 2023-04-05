@@ -11,9 +11,9 @@ func TestGetGormDB(t *testing.T) {
 		Type:     "mysql",
 		Addr:     "10.0.16.10",
 		Port:     "3306",
-		DBName:   "exmail",
+		DBName:   "mysql",
 		Username: "root",
-		Password: "rocky",
+		Password: "centos",
 	}
 	_, err := mydb.NewDBConnect(sugar.NewLogger("debug", "", "", false))
 	// DB.AutoMigrate(&Department{})

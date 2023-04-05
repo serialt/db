@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -25,21 +26,13 @@ type Database struct {
 	ConnMaxLifetime time.Duration // 设置连接可复用的最大时间。
 }
 
-var logSugar *zap.SugaredLogger
-
 // 设置gorm日志使用zap
-var GormLogger zapgorm2.Logger
-
-func (db *Database) GetGormDB(zaplog *zap.Logger) (*gorm.DB, error) {
-	return db.NewDBConnect(zaplog)
-}
 
 // NewDBConnect 获取gorm.DB
 func (db *Database) NewDBConnect(zaplog *zap.Logger) (GormDB *gorm.DB, err error) {
 	// 使用zap 接收gorm日志
-	GormLogger = zapgorm2.New(zaplog)
+	GormLogger := zapgorm2.New(zaplog)
 	GormLogger.SetAsDefault()
-	logSugar = zaplog.Sugar()
 
 	var dialector gorm.Dialector
 	switch db.Type {
@@ -75,10 +68,8 @@ func (db *Database) NewDBConnect(zaplog *zap.Logger) (GormDB *gorm.DB, err error
 			PreferSimpleProtocol: true, // disables implicit prepared statement usage,
 		})
 	default:
-		logSugar.Error("The database is not supported, please choice [sqlite],[mysql] or [postgresql]")
-		return
+		return nil, errors.New("The database is not supported, please choice [sqlite],[mysql] or [postgresql]")
 	}
-	logSugar.Debugf("使用的数据库类型是: %s", db.Type)
 	GormDB, err = gorm.Open(dialector, &gorm.Config{
 		Logger:                                   GormLogger,
 		DisableForeignKeyConstraintWhenMigrating: true,
