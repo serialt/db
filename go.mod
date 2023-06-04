@@ -1,6 +1,6 @@
-module github.com/serialt/db
+module github.com/serialt/db/v3
 
-go 1.19
+go 1.20
 
 require (
 	github.com/glebarez/sqlite v1.4.6
