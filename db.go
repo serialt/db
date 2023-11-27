@@ -3,7 +3,8 @@ package db
 import (
 	"github.com/glebarez/sqlite"
 
-	"golang.org/x/exp/slog"
+	"log/slog"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )
