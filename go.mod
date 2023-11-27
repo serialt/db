@@ -1,4 +1,4 @@
-module github.com/serialt/db
+module github.com/serialt/db/v2
 
 go 1.21.4
 
