@@ -6,12 +6,10 @@ import (
 	"time"
 
 	"github.com/glebarez/sqlite"
-	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
-	"moul.io/zapgorm2"
 )
 
 type Database struct {
@@ -29,10 +27,10 @@ type Database struct {
 // 设置gorm日志使用zap
 
 // NewDBConnect 获取gorm.DB
-func (db *Database) NewDBConnect(zaplog *zap.Logger) (GormDB *gorm.DB, err error) {
+func (db *Database) NewDBConnect() (GormDB *gorm.DB, err error) {
 	// 使用zap 接收gorm日志
-	GormLogger := zapgorm2.New(zaplog)
-	GormLogger.SetAsDefault()
+
+	GormLogger := SetSlog()
 
 	var dialector gorm.Dialector
 	switch db.Type {

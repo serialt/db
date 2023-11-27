@@ -1,21 +1,24 @@
 package db
 
 import (
+	"log/slog"
 	"testing"
 
-	"github.com/serialt/sugar"
+	"github.com/serialt/sugar/v3"
 )
 
 func TestGetGormDB(t *testing.T) {
+	slog.SetDefault(sugar.New())
 	mydb := &Database{
 		Type:     "mysql",
 		Addr:     "10.0.16.10",
-		Port:     "3306",
+		Port:     "3336",
 		DBName:   "mysql",
 		Username: "root",
-		Password: "centos",
+		Password: "rocky",
 	}
-	_, err := mydb.NewDBConnect(sugar.NewLogger("debug", "", "", false))
+
+	_, err := mydb.NewDBConnect()
 	// DB.AutoMigrate(&Department{})
 	// DB.AutoMigrate(&Userlist{})
 	if err != nil {
