@@ -14,7 +14,6 @@ func TestGetGormDB(t *testing.T) {
 	sqlDB, err := New("test.db")
 	if err != nil {
 		t.Fatal("open db failed")
-		panic(err)
 	}
 	sqlDB.AutoMigrate(&User{})
 
