@@ -2,6 +2,8 @@ package db
 
 import (
 	"testing"
+
+	"github.com/serialt/sugar/v3"
 )
 
 func TestGetGormDB(t *testing.T) {
@@ -10,8 +12,9 @@ func TestGetGormDB(t *testing.T) {
 		Name string
 		Age  int
 	}
-
-	sqlDB, err := New("test.db")
+	gslog := sugar.New(sugar.WithLevel("debug"))
+	gslog.Debug("hello")
+	sqlDB, err := New("test.db", gslog)
 	if err != nil {
 		t.Fatal("open db failed")
 	}
@@ -19,7 +22,7 @@ func TestGetGormDB(t *testing.T) {
 
 	jerry := &User{Name: "jerry", Age: 18}
 
-	sqlDB.Model(&User{}).Create(&jerry)
+	sqlDB.Model(&User{}).Debug().Create(&jerry)
 
 	newJerry := &User{}
 
