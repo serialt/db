@@ -3,15 +3,15 @@ package db
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/glebarez/sqlite"
-	"go.uber.org/zap"
+	slogGorm "github.com/orandin/slog-gorm"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
-	"moul.io/zapgorm2"
 )
 
 type Database struct {
@@ -29,23 +29,25 @@ type Database struct {
 // 设置gorm日志使用zap
 
 // NewDBConnect 获取gorm.DB
-func (db *Database) NewDBConnect(zaplog *zap.Logger) (GormDB *gorm.DB, err error) {
-	// 使用zap 接收gorm日志
-	GormLogger := zapgorm2.New(zaplog)
-	GormLogger.SetAsDefault()
+func NewDBConnect(conf *Database, gslog *slog.Logger) (GormDB *gorm.DB, err error) {
+	gormLogger := slogGorm.New(
+		slogGorm.WithHandler(gslog.Handler()),
+		slogGorm.WithTraceAll(), // trace all messages
+		slogGorm.SetLogLevel(slogGorm.DefaultLogType, slog.LevelDebug),
+	)
 
 	var dialector gorm.Dialector
-	switch db.Type {
+	switch conf.Type {
 	case "sqlite":
-		dialector = sqlite.Open(db.DBName)
+		dialector = sqlite.Open(conf.DBName)
 
 	case "mysql":
 		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-			db.Username,
-			db.Password,
-			db.Addr,
-			db.Port,
-			db.DBName,
+			conf.Username,
+			conf.Password,
+			conf.Addr,
+			conf.Port,
+			conf.DBName,
 		)
 		dialector = mysql.New(mysql.Config{
 			DSN:                       dsn,
@@ -57,11 +59,11 @@ func (db *Database) NewDBConnect(zaplog *zap.Logger) (GormDB *gorm.DB, err error
 		})
 	case "postgresql":
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai",
-			db.Addr,
-			db.Username,
-			db.Password,
-			db.DBName,
-			db.Port,
+			conf.Addr,
+			conf.Username,
+			conf.Password,
+			conf.DBName,
+			conf.Port,
 		)
 		dialector = postgres.New(postgres.Config{
 			DSN:                  dsn,
@@ -71,21 +73,21 @@ func (db *Database) NewDBConnect(zaplog *zap.Logger) (GormDB *gorm.DB, err error
 		return nil, errors.New("The database is not supported, please choice [sqlite],[mysql] or [postgresql]")
 	}
 	GormDB, err = gorm.Open(dialector, &gorm.Config{
-		Logger:                                   GormLogger,
+		Logger:                                   gormLogger,
 		DisableForeignKeyConstraintWhenMigrating: true,
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true, // 设置创建表名时不使用复数
 		},
 	})
-	if db.MaxOpenConns != 0 {
+	if conf.MaxOpenConns != 0 {
 		// Gorm 使用database/sql 维护连接池
 		sqlDB, _ := GormDB.DB()
 		// 设置空闲连接池中连接的最大数量
-		sqlDB.SetMaxIdleConns(db.MaxIdleConns)
+		sqlDB.SetMaxIdleConns(conf.MaxIdleConns)
 		// 设置打开数据库连接的最大数量
-		sqlDB.SetMaxOpenConns(db.MaxOpenConns)
+		sqlDB.SetMaxOpenConns(conf.MaxOpenConns)
 		// 设置了连接可复用的最大时间
-		sqlDB.SetConnMaxLifetime(db.ConnMaxLifetime)
+		sqlDB.SetConnMaxLifetime(conf.ConnMaxLifetime)
 	} else {
 		sqlDB, _ := GormDB.DB()
 		// SetMaxIdleConns 设置空闲连接池中连接的最大数量
