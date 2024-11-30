@@ -1,7 +1,6 @@
 package db
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -36,43 +35,7 @@ func NewDBConnect(conf *Database, gslog *slog.Logger) (GormDB *gorm.DB, err erro
 		slogGorm.SetLogLevel(slogGorm.DefaultLogType, slog.LevelDebug),
 	)
 
-	var dialector gorm.Dialector
-	switch conf.Type {
-	case "sqlite":
-		dialector = sqlite.Open(conf.DBName)
-
-	case "mysql":
-		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-			conf.Username,
-			conf.Password,
-			conf.Addr,
-			conf.Port,
-			conf.DBName,
-		)
-		dialector = mysql.New(mysql.Config{
-			DSN:                       dsn,
-			DefaultStringSize:         256,   // string 类型字段的默认长度
-			DisableDatetimePrecision:  true,  // 禁用 datetime 精度，MySQL 5.6 之前的数据库不支持
-			DontSupportRenameIndex:    true,  // 重命名索引时采用删除并新建的方式，MySQL 5.7 之前的数据库和 MariaDB 不支持重命名索引
-			DontSupportRenameColumn:   true,  // 用 `change` 重命名列，MySQL 8 之前的数据库和 MariaDB 不支持重命名列
-			SkipInitializeWithVersion: false, // 根据当前 MySQL 版本自动配置
-		})
-	case "postgresql":
-		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai",
-			conf.Addr,
-			conf.Username,
-			conf.Password,
-			conf.DBName,
-			conf.Port,
-		)
-		dialector = postgres.New(postgres.Config{
-			DSN:                  dsn,
-			PreferSimpleProtocol: true, // disables implicit prepared statement usage,
-		})
-	default:
-		return nil, errors.New("The database is not supported, please choice [sqlite],[mysql] or [postgresql]")
-	}
-	GormDB, err = gorm.Open(dialector, &gorm.Config{
+	GormDB, err = gorm.Open(NewDialector(conf), &gorm.Config{
 		Logger:                                   gormLogger,
 		DisableForeignKeyConstraintWhenMigrating: true,
 		NamingStrategy: schema.NamingStrategy{
@@ -98,5 +61,51 @@ func NewDBConnect(conf *Database, gslog *slog.Logger) (GormDB *gorm.DB, err erro
 		sqlDB.SetConnMaxLifetime(time.Hour)
 	}
 
+	return
+}
+
+func NewDSN(conf *Database) (dsn string) {
+	switch conf.Type {
+	case "mysql", "tidb", "mariadb":
+		dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			conf.Username,
+			conf.Password,
+			conf.Addr,
+			conf.Port,
+			conf.DBName,
+		)
+	case "sqlite3", "sqlite":
+		dsn = conf.DBName
+	case "postgres", "postgresql":
+		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai",
+			conf.Addr,
+			conf.Username,
+			conf.Password,
+			conf.DBName,
+			conf.Port,
+		)
+	}
+	return
+}
+
+func NewDialector(conf *Database) (dialector gorm.Dialector) {
+	switch conf.Type {
+	case "mysql", "tidb", "mariadb":
+		dialector = mysql.New(mysql.Config{
+			DSN:                       NewDSN(conf),
+			DefaultStringSize:         256,   // string 类型字段的默认长度
+			DisableDatetimePrecision:  true,  // 禁用 datetime 精度，MySQL 5.6 之前的数据库不支持
+			DontSupportRenameIndex:    true,  // 重命名索引时采用删除并新建的方式，MySQL 5.7 之前的数据库和 MariaDB 不支持重命名索引
+			DontSupportRenameColumn:   true,  // 用 `change` 重命名列，MySQL 8 之前的数据库和 MariaDB 不支持重命名列
+			SkipInitializeWithVersion: false, // 根据当前 MySQL 版本自动配置
+		})
+	case "sqlite3", "sqlite":
+		dialector = sqlite.Open(conf.DBName)
+	case "postgres", "postgresql":
+		dialector = postgres.New(postgres.Config{
+			DSN:                  NewDSN(conf),
+			PreferSimpleProtocol: true, // disables implicit prepared statement usage,
+		})
+	}
 	return
 }
